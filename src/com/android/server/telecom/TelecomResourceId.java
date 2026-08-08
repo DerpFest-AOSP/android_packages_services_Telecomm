@@ -112,7 +112,8 @@ public class TelecomResourceId {
     }
 
     public static boolean getBoolean(Context context, String name) {
-        return getResources(context).getBoolean(getIdentifier(context, name, "bool"));
+        final int id = getIdentifier(context, name, "bool");
+        return id != 0 && getResources(context).getBoolean(id);
     }
 
     public static String[] getStringArray(Context context, String name) {

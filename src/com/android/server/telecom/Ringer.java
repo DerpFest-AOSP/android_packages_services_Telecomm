@@ -144,6 +144,12 @@ public class Ringer {
     private static final int RAMPING_RINGER_DURATION = 10000;
     private static final int OUTGOING_CALL_VIBRATING_DURATION = 100;
 
+    // These keys are @hide in the framework and not exposed to the module API surface, so they are
+    // defined locally to avoid referencing the hidden Settings/UserHandle constants.
+    private static final String VIBRATE_ON_CALLWAITING = "vibrate_on_callwaiting";
+    private static final String RINGTONE_VIBRATION_PATTERN = "ringtone_vibration_pattern";
+    private static final String CUSTOM_RINGTONE_VIBRATION_PATTERN = "custom_ringtone_vibration_pattern";
+
     static {
         // construct complete pulse pattern
         PULSE_PATTERN = new long[PULSE_PRIMING_PATTERN.length + PULSE_RAMPING_PATTERN.length];
@@ -360,7 +366,8 @@ public class Ringer {
         mNotificationManager = notificationManager;
         mAccessibilityManagerAdapter = accessibilityManagerAdapter;
         mAnomalyReporter = anomalyReporter;
-        mUseSimplePattern = mContext.getResources().getBoolean(R.bool.use_simple_vibration_pattern);
+        mUseSimplePattern =
+                TelecomResourceId.getBoolean(mContext, "use_simple_vibration_pattern");
 
         mDefaultVibrationEffect =
                 loadDefaultRingVibrationEffect(mContext, mVibrationEffectProxy, featureFlags);
@@ -370,10 +377,12 @@ public class Ringer {
 
         mAudioManager = mContext.getSystemService(AudioManager.class);
         mFlags = featureFlags;
-        Resources res = mContext.getResources();
-        int resourceId = Resources.getSystem().getIdentifier(
-                "config_ringtoneVibrationSettingsSupported", "bool", "android");
-        mRingtoneVibrationSupported = res.getBoolean(resourceId);
+        int resourceId =
+                Resources.getSystem()
+                        .getIdentifier(
+                                "config_ringtoneVibrationSettingsSupported", "bool", "android");
+        mRingtoneVibrationSupported =
+                resourceId != 0 && Resources.getSystem().getBoolean(resourceId);
         mCallConnectedIndicatorSettings = callConnectedIndicator;
         mAsyncTaskExecutor = asyncTaskExecutor;
         mCrsAudioController = crsAudioController;
@@ -760,8 +769,8 @@ public class Ringer {
 
         stopRinging();
 
-        if (Settings.System.getIntForUser(mContext.getContentResolver(),
-                Settings.System.VIBRATE_ON_CALLWAITING, 0, UserHandle.USER_CURRENT) >= 1) {
+        if (Settings.System.getInt(mContext.getContentResolver(),
+                VIBRATE_ON_CALLWAITING, 0) == 1) {
             vibrate(200, 300, 500);
         }
 
@@ -1095,8 +1104,8 @@ public class Ringer {
     }
 
     private void updateVibrationPattern() {
-        final int pattern = Settings.System.getIntForUser(mContext.getContentResolver(),
-                Settings.System.RINGTONE_VIBRATION_PATTERN, 0, UserHandle.USER_CURRENT);
+        final int pattern = Settings.System.getInt(mContext.getContentResolver(),
+                RINGTONE_VIBRATION_PATTERN, 0);
         if (mUseSimplePattern) {
             switch (pattern) {
                 case 1:
@@ -1116,10 +1125,9 @@ public class Ringer {
                         SEVEN_ELEMENTS_VIBRATION_AMPLITUDE, REPEAT_SIMPLE_VIBRATION_AT);
                     break;
                 case 5:
-                    String customVibValue = Settings.System.getStringForUser(
+                    String customVibValue = Settings.System.getString(
                             mContext.getContentResolver(),
-                            Settings.System.CUSTOM_RINGTONE_VIBRATION_PATTERN,
-                            UserHandle.USER_CURRENT);
+                            CUSTOM_RINGTONE_VIBRATION_PATTERN);
                     String[] customVib = new String[3];
                     if (customVibValue != null && !customVibValue.equals("")) {
                         customVib = customVibValue.split(",", 3);
